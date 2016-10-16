@@ -15,7 +15,7 @@ import (
 
 type FileSystem interface {
 	http.FileSystem
-	Add(name string, stat os.FileInfo, data string) error
+	Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error
 }
 
 type fileSystem struct {
@@ -42,14 +42,14 @@ func NewFileSystem() FileSystem {
 	}
 }
 
-func NewDebugFileSystem() FileSystem {
+func NewFallbackFileSystem() FileSystem {
 	return &fileSystem{
 		root:         node{"", map[string]node{}, dirStat(""), ""},
 		fallbackToOS: true,
 	}
 }
 
-func (fs *fileSystem) Add(name string, stat os.FileInfo, data string) error {
+func (fs *fileSystem) Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error {
 	fs.Lock()
 	defer fs.Unlock()
 
@@ -59,6 +59,7 @@ func (fs *fileSystem) Add(name string, stat os.FileInfo, data string) error {
 	}
 
 	parts := strings.Split(name, "/")
+	stat := info{parts[len(parts)-1], size, mode, modTime}
 	n := &fs.root
 	for i, p := range parts {
 		if i == len(parts)-1 {

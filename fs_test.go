@@ -24,23 +24,23 @@ var (
 		{"bar", info{name: "bar", size: 8, mode: 0x1a5, modTime: now}, "98765432", "/bar", true, false},
 		{"d/alpha", info{name: "alpha", size: 8, mode: 0x1a5, modTime: now}, "98765432", "d/alpha", true, false},
 		{"d/beta", info{name: "beta", size: 8, mode: 0x1a5, modTime: now}, "98765432", "./d/beta", true, false},
-		{"d/gamma", info{name: "delta", size: 8, mode: 0x1a5, modTime: now}, "98765432", "/d/gamma", true, false},
+		{"d/gamma", info{name: "gamma", size: 8, mode: 0x1a5, modTime: now}, "98765432", "/d/gamma", true, false},
 		{"", info{}, "", "fs_test.go", false, true},
 		{"", info{}, "", "fs_test.stop", false, false},
 	}
 )
 
 func TestFiles(t *testing.T) {
-	for j, fs := range []FileSystem{NewFileSystem(), NewDebugFileSystem()} {
+	for j, fs := range []FileSystem{NewFileSystem(), NewFallbackFileSystem()} {
 		for i, tc := range files {
 			t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
 				if tc.name != "" {
-					err := fs.Add(tc.name, tc.stat, tc.data)
+					err := fs.Add(tc.name, tc.stat.Size(), tc.stat.Mode(), tc.stat.ModTime(), tc.data)
 					if err != nil {
 						t.Fatalf("didn't expect error %+v", err)
 					}
 
-					err = fs.Add(tc.name, tc.stat, tc.data)
+					err = fs.Add(tc.name, tc.stat.Size(), tc.stat.Mode(), tc.stat.ModTime(), tc.data)
 					if err == nil {
 						t.Fatalf("file already exist, should've gotten an error")
 					} else if !os.IsExist(errors.Cause(err)) {
@@ -104,7 +104,7 @@ func TestDir(t *testing.T) {
 
 	for _, f := range files {
 		if f.name != "" {
-			fs.Add(f.name, f.stat, f.data)
+			fs.Add(f.name, f.stat.Size(), f.stat.Mode(), f.stat.ModTime(), f.data)
 		}
 	}
 
@@ -126,10 +126,10 @@ func TestDir(t *testing.T) {
 
 		{".", true, 0, false, []string{"bar", "d", "foo"}, 0, nil, false},
 		{"/", true, 0, false, []string{"bar", "d", "foo"}, 0, nil, false},
-		{"/d", true, 0, false, []string{"alpha", "beta", "delta"}, 0, nil, false},
-		{"./d", true, 0, false, []string{"alpha", "beta", "delta"}, 0, nil, false},
-		{"d", true, 0, false, []string{"alpha", "beta", "delta"}, 0, nil, false},
-		{"d/", true, 0, false, []string{"alpha", "beta", "delta"}, 0, nil, false},
+		{"/d", true, 0, false, []string{"alpha", "beta", "gamma"}, 0, nil, false},
+		{"./d", true, 0, false, []string{"alpha", "beta", "gamma"}, 0, nil, false},
+		{"d", true, 0, false, []string{"alpha", "beta", "gamma"}, 0, nil, false},
+		{"d/", true, 0, false, []string{"alpha", "beta", "gamma"}, 0, nil, false},
 	}
 
 	for i, tc := range cases {
