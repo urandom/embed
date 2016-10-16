@@ -13,13 +13,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+// A FileSystem is used to store and access file data. It implements the
+// http.FileSystem interface to be used effortlessly with a FileServer handler.
+//
+// Since all file data can be provided as a string literal in the Go source,
+// such entries can be effectively embedded into the resultant binary.
 type FileSystem struct {
 	// Fallback instructs the file system to fall back to the operating system
 	// if a file hasn't beed aded to it.
 	Fallback bool
 
-	sync.RWMutex
-	root node
+	mutex *sync.RWMutex
+	root  node
 }
 
 type node struct {
@@ -34,15 +39,21 @@ type payload struct {
 	data string
 }
 
+// New creates a fresh instance of a FileSystem
 func New() *FileSystem {
 	return &FileSystem{
-		root: node{"", map[string]node{}, dirStat(""), ""},
+		mutex: &sync.RWMutex{},
+		root:  node{"", map[string]node{}, dirStat(""), ""},
 	}
 }
 
+// Add inserts a new named file representation into the file system. The size,
+// mode and modTime parameters represent it's byte length, mode bits, and
+// modification time, respectively. The file data is represented as a string,
+// which is usually created using the fmt package's '%q' verb.
 func (fs *FileSystem) Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error {
-	fs.Lock()
-	defer fs.Unlock()
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
 
 	name = path.Clean(filepath.ToSlash(name))
 	if path.IsAbs(name) {
@@ -82,9 +93,12 @@ func (fs *FileSystem) Add(name string, size int64, mode os.FileMode, modTime tim
 	return nil
 }
 
+// Opens a previously inserted named file. If such a file hasn't been added, it
+// may optionally fall back to accessing the file with the same path in the
+// operating system.
 func (fs *FileSystem) Open(name string) (http.File, error) {
-	fs.RLock()
-	defer fs.RUnlock()
+	fs.mutex.RLock()
+	defer fs.mutex.RUnlock()
 
 	name = path.Clean(filepath.ToSlash(name))
 	if path.IsAbs(name) {
