@@ -27,6 +27,7 @@ const (
 	headerData = `
 {{- if .Tags }}// +build {{ .Tags }}
 {{- end }}
+
 // DO NOT EDIT ** This file was generated with github.com/urandom/embed ** DO NOT EDIT //
 
 package {{ .Pkg }}
@@ -37,19 +38,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/urandom/embed"
+	"github.com/urandom/embed/filesystem"
 )
 
-func {{ .Function }}() (embed.FileSystem, error) {
+func {{ .Function }}() (*filesystem.FileSystem, error) {
+	fs := filesystem.New()
 {{ if .Fallback }}
-	fs := embed.NewFallbackFileSystem()
-{{ else }}
-	fs := embed.NewFileSystem()
+	fs.Fallback = true
 {{ end -}}
 `
 
 	fileData = `
-	if err := fs.Add("{{ .Name }}", {{ .Size }}, os.FileMode({{ .Mode }}), time.Unix({{ .ModTime }}), {{ .Data }}); err != nil {
+	if err := fs.Add("{{ .Name }}", {{ .Size }}, os.FileMode({{ .Mode }}), time.Unix({{ .ModTime }}, 0), {{ .Data }}); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("packing file {{ .Name }}"))
 	}
 `

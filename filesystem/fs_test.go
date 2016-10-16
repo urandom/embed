@@ -1,4 +1,4 @@
-package embed
+package filesystem
 
 import (
 	"fmt"
@@ -31,9 +31,13 @@ var (
 )
 
 func TestFiles(t *testing.T) {
-	for j, fs := range []FileSystem{NewFileSystem(), NewFallbackFileSystem()} {
-		for i, tc := range files {
-			t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
+	fs := New()
+	fallback := New()
+	fallback.Fallback = true
+
+	for i, fs := range []*FileSystem{fs, fallback} {
+		for j, tc := range files {
+			t.Run(fmt.Sprintf("case %d-%d", i, j), func(t *testing.T) {
 				if tc.name != "" {
 					err := fs.Add(tc.name, tc.stat.Size(), tc.stat.Mode(), tc.stat.ModTime(), tc.data)
 					if err != nil {
@@ -49,7 +53,7 @@ func TestFiles(t *testing.T) {
 				}
 
 				f, err := fs.Open(tc.query)
-				if tc.exists || j == 1 && tc.inOS {
+				if tc.exists || fs.Fallback && tc.inOS {
 					if err != nil {
 						t.Fatalf("opening file: %+v", err)
 					}
@@ -77,7 +81,7 @@ func TestFiles(t *testing.T) {
 					t.Fatalf("file stat: %+v", err)
 				}
 
-				if j != 1 || !tc.inOS {
+				if !fs.Fallback || !tc.inOS {
 					if stat.Name() != tc.stat.Name() {
 						t.Fatalf("expected name %s, got %s", tc.stat.Name(), stat.Name())
 					}
@@ -100,7 +104,7 @@ func TestFiles(t *testing.T) {
 }
 
 func TestDir(t *testing.T) {
-	fs := NewFileSystem()
+	fs := New()
 
 	for _, f := range files {
 		if f.name != "" {

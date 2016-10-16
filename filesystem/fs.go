@@ -1,4 +1,4 @@
-package embed
+package filesystem
 
 import (
 	"net/http"
@@ -13,15 +13,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type FileSystem interface {
-	http.FileSystem
-	Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error
-}
+type FileSystem struct {
+	// Fallback instructs the file system to fall back to the operating system
+	// if a file hasn't beed aded to it.
+	Fallback bool
 
-type fileSystem struct {
 	sync.RWMutex
-	root         node
-	fallbackToOS bool
+	root node
 }
 
 type node struct {
@@ -36,20 +34,13 @@ type payload struct {
 	data string
 }
 
-func NewFileSystem() FileSystem {
-	return &fileSystem{
+func New() *FileSystem {
+	return &FileSystem{
 		root: node{"", map[string]node{}, dirStat(""), ""},
 	}
 }
 
-func NewFallbackFileSystem() FileSystem {
-	return &fileSystem{
-		root:         node{"", map[string]node{}, dirStat(""), ""},
-		fallbackToOS: true,
-	}
-}
-
-func (fs *fileSystem) Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error {
+func (fs *FileSystem) Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error {
 	fs.Lock()
 	defer fs.Unlock()
 
@@ -67,7 +58,12 @@ func (fs *fileSystem) Add(name string, size int64, mode os.FileMode, modTime tim
 			if _, ok := n.children[p]; ok {
 				return errors.Wrap(os.ErrExist, "non-dir node already exists")
 			}
-			n.children[p] = node{p, nil, stat, data}
+			var children map[string]node
+			if stat.IsDir() {
+				children = map[string]node{}
+			}
+
+			n.children[p] = node{p, children, stat, data}
 			break
 		}
 
@@ -86,7 +82,7 @@ func (fs *fileSystem) Add(name string, size int64, mode os.FileMode, modTime tim
 	return nil
 }
 
-func (fs *fileSystem) Open(name string) (http.File, error) {
+func (fs *FileSystem) Open(name string) (http.File, error) {
 	fs.RLock()
 	defer fs.RUnlock()
 
@@ -106,7 +102,7 @@ func (fs *fileSystem) Open(name string) (http.File, error) {
 		} else {
 			c, ok := n.children[p]
 			if !ok {
-				if fs.fallbackToOS {
+				if fs.Fallback {
 					f, err := os.Open(name)
 					if err != nil {
 						err = errors.Wrap(err, "falling back to OS")
