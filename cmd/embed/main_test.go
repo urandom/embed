@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"testing"
 )
 
@@ -18,13 +19,18 @@ func TestWrite(t *testing.T) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "file_data.go", buf.Bytes(), 0)
 	if err != nil {
-		t.Fatalf("parsing expr: %+v\n", err)
+		t.Fatalf("parsing expr: %+v", err)
 	}
 
 	conf := types.Config{Importer: importer.Default()}
 	_, err = conf.Check("hello", fset, []*ast.File{f}, nil)
 	if err != nil {
-		t.Fatalf("checking: %+v\n", err)
+		t.Fatalf("checking: %+v", err)
+	}
+
+	totalFiles, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("reading testdata dir: %+v", err)
 	}
 
 	addCalls := 0
@@ -49,8 +55,8 @@ func TestWrite(t *testing.T) {
 		return true
 	})
 
-	if addCalls != 4 {
-		t.Fatalf("expected %d fs.Add calls, got %d", 4, addCalls)
+	if addCalls != len(totalFiles) {
+		t.Fatalf("expected %d fs.Add calls, got %d", len(totalFiles), addCalls)
 	}
 }
 
