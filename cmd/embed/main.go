@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -31,24 +32,35 @@ func main() {
 		os.Exit(2)
 	}
 
-	out, err := os.OpenFile(output, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("opening %s for writing: %+v\n", output, err)
+	var out io.WriteCloser
+	var err error
+
+	if output == "-" {
+		out = os.Stdout
+	} else {
+		out, err = os.OpenFile(output, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+		if err != nil {
+			log.Fatalf("opening %s for writing: %+v\n", output, err)
+		}
 	}
 
+	writeData(out, header{packageName, functionName, buildTags, fallback}, flag.Args(), fatal, verbose)
+}
+
+func writeData(w io.WriteCloser, h header, names []string, fatal, verbose bool) {
 	defer func() {
-		if err := out.Close(); err != nil {
-			log.Fatalf("closing output file %s: %+v\n", output, err)
+		if err := w.Close(); err != nil {
+			log.Fatalf("closing output file: %+v\n", err)
 		}
 	}()
 
 	buf := bytes.Buffer{}
-	err = headerTmpl.Execute(&buf, header{packageName, functionName, buildTags, fallback})
+	err := headerTmpl.Execute(&buf, h)
 	if err != nil {
 		log.Fatalf("executing header template: %+v\n", err)
 	}
 
-	buf.WriteTo(out)
+	buf.WriteTo(w)
 
 	defer func() {
 		buf.Reset()
@@ -57,7 +69,7 @@ func main() {
 			log.Fatalf("executing footer template: %+v\n", err)
 		}
 
-		buf.WriteTo(out)
+		buf.WriteTo(w)
 	}()
 
 	errChan := make(chan error)
@@ -72,7 +84,7 @@ func main() {
 		}
 	}()
 
-	for _, name := range flag.Args() {
+	for _, name := range names {
 		for f := range processFile(name, errChan) {
 			buf.Reset()
 			err = fileTmpl.Execute(&buf, f)
@@ -83,10 +95,9 @@ func main() {
 				}
 			}
 
-			buf.WriteTo(out)
+			buf.WriteTo(w)
 		}
 	}
-
 }
 
 func processFile(name string, errChan chan<- error) <-chan file {
@@ -180,7 +191,7 @@ func init() {
 		flag.PrintDefaults()
 	}
 
-	flag.StringVar(&output, "output", "file_data.go", "output file name")
+	flag.StringVar(&output, "output", "file_data.go", "output file name. '-' for stdout")
 	flag.StringVar(&functionName, "function-name", "NewFileSystem", "name of the init function")
 	flag.StringVar(&packageName, "package-name", "main", "package name of the generated file")
 	flag.StringVar(&buildTags, "build-tags", "", "build tags for the generated file")
