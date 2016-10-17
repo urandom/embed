@@ -31,9 +31,9 @@ func TestWrite(t *testing.T) {
 			[]string{"testdata/..."},
 			[]call{
 				{"\"testdata/1\"", "11", "420", "\"1234567890\\n\""},
-				{"\"testdata/2\"", "11", "304", "\"0987654321\\n\""},
-				{"\"testdata/foo.go\"", "65", "511", "\"package main\\n\\nimport \\\"fmt\\\"\\n\\nfunc main() {\\n\\tfmt.Println(\\\"test\\\")\\n}\\n\""},
-				{"\"testdata/vmlinuz\"", "20", "292", "\"MZ\\xea\\a\\x00\\xc0\\a\\x8cȎ؎\\xc0\\x8e\\xd01\\xe4\\xfb\\xfc\\xbe\""},
+				{"\"testdata/2\"", "11", "420", "\"0987654321\\n\""},
+				{"\"testdata/foo.go\"", "65", "493", "\"package main\\n\\nimport \\\"fmt\\\"\\n\\nfunc main() {\\n\\tfmt.Println(\\\"test\\\")\\n}\\n\""},
+				{"\"testdata/vmlinuz\"", "20", "420", "\"MZ\\xea\\a\\x00\\xc0\\a\\x8cȎ؎\\xc0\\x8e\\xd01\\xe4\\xfb\\xfc\\xbe\""},
 			},
 		},
 	}
