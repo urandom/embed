@@ -55,16 +55,10 @@ func writeData(w io.WriteCloser, h header, names []string, fatal, verbose bool) 
 	}()
 
 	buf := bytes.Buffer{}
-	err := headerTmpl.Execute(&buf, h)
-	if err != nil {
-		log.Fatalf("executing header template: %+v\n", err)
-	}
-
-	buf.WriteTo(w)
 
 	defer func() {
 		buf.Reset()
-		err = footerTmpl.Execute(&buf, nil)
+		err := footerTmpl.Execute(&buf, nil)
 		if err != nil {
 			log.Fatalf("executing footer template: %+v\n", err)
 		}
@@ -84,10 +78,22 @@ func writeData(w io.WriteCloser, h header, names []string, fatal, verbose bool) 
 		}
 	}()
 
+	var headerWritten bool
+
 	for _, name := range names {
 		for f := range processFile(name, errChan) {
+			if !headerWritten {
+				err := headerTmpl.Execute(&buf, h)
+				if err != nil {
+					log.Fatalf("executing header template: %+v\n", err)
+				}
+
+				buf.WriteTo(w)
+				headerWritten = true
+			}
+
 			buf.Reset()
-			err = fileTmpl.Execute(&buf, f)
+			err := fileTmpl.Execute(&buf, f)
 			if err != nil {
 				log.Printf("executing file template: %+v\n", err)
 				if fatal {
@@ -97,6 +103,16 @@ func writeData(w io.WriteCloser, h header, names []string, fatal, verbose bool) 
 
 			buf.WriteTo(w)
 		}
+	}
+
+	if !headerWritten {
+		err := emptyHeaderTmpl.Execute(&buf, h)
+		if err != nil {
+			log.Fatalf("executing empty header template: %+v\n", err)
+		}
+
+		buf.WriteTo(w)
+		headerWritten = true
 	}
 }
 
@@ -138,7 +154,7 @@ func processFile(name string, errChan chan<- error) <-chan file {
 					if verbose {
 						log.Printf("%s is a directory\n", path)
 					}
-					if !recursive {
+					if !recursive && path != name {
 						return filepath.SkipDir
 					}
 

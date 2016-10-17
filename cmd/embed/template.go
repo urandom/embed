@@ -18,9 +18,10 @@ type file struct {
 }
 
 var (
-	headerTmpl = template.Must(template.New("gen-header").Parse(headerData))
-	fileTmpl   = template.Must(template.New("gen-file").Parse(fileData))
-	footerTmpl = template.Must(template.New("gen-footer").Parse(footerData))
+	headerTmpl      = template.Must(template.New("gen-header").Parse(headerData))
+	emptyHeaderTmpl = template.Must(template.New("gen-empty-header").Parse(emptyHeaderData))
+	fileTmpl        = template.Must(template.New("gen-file").Parse(fileData))
+	footerTmpl      = template.Must(template.New("gen-footer").Parse(footerData))
 )
 
 const (
@@ -38,6 +39,25 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/urandom/embed/filesystem"
+)
+
+func {{ .Function }}() (*filesystem.FileSystem, error) {
+	fs := filesystem.New()
+{{ if .Fallback }}
+	fs.Fallback = true
+{{ end -}}
+`
+
+	emptyHeaderData = `
+{{- if .Tags }}// +build {{ .Tags }}
+{{- end }}
+
+// DO NOT EDIT ** This file was generated with github.com/urandom/embed ** DO NOT EDIT //
+
+package {{ .Pkg }}
+
+import (
 	"github.com/urandom/embed/filesystem"
 )
 
