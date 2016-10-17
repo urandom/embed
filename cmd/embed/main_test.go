@@ -8,6 +8,8 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"log"
+	"os"
 	"testing"
 )
 
@@ -31,9 +33,9 @@ func TestWrite(t *testing.T) {
 			[]string{"testdata/..."},
 			[]call{
 				{"\"testdata/1\"", "11", "420", "\"1234567890\\n\""},
-				{"\"testdata/2\"", "11", "420", "\"0987654321\\n\""},
-				{"\"testdata/foo.go\"", "65", "493", "\"package main\\n\\nimport \\\"fmt\\\"\\n\\nfunc main() {\\n\\tfmt.Println(\\\"test\\\")\\n}\\n\""},
-				{"\"testdata/vmlinuz\"", "20", "420", "\"MZ\\xea\\a\\x00\\xc0\\a\\x8cȎ؎\\xc0\\x8e\\xd01\\xe4\\xfb\\xfc\\xbe\""},
+				{"\"testdata/2\"", "11", "308", "\"0987654321\\n\""},
+				{"\"testdata/foo.go\"", "65", "260", "\"package main\\n\\nimport \\\"fmt\\\"\\n\\nfunc main() {\\n\\tfmt.Println(\\\"test\\\")\\n}\\n\""},
+				{"\"testdata/vmlinuz\"", "20", "267", "\"MZ\\xea\\a\\x00\\xc0\\a\\x8cȎ؎\\xc0\\x8e\\xd01\\xe4\\xfb\\xfc\\xbe\""},
 			},
 		},
 	}
@@ -121,7 +123,7 @@ func TestWrite(t *testing.T) {
 				}
 
 				if lit.Value != call.mode {
-					t.Fatalf("Expected %s, got %s", call.mode, lit.Value)
+					t.Fatalf("Expected %s for %s, got %s", call.name, call.mode, lit.Value)
 				}
 
 				fourth, ok := callExpr.Args[3].(*ast.CallExpr)
@@ -180,4 +182,19 @@ type buffer struct {
 
 func (cb *buffer) Close() error {
 	return nil
+}
+
+func init() {
+	if err := os.Chmod("testdata/1", 0644); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.Chmod("testdata/2", 0464); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.Chmod("testdata/foo.go", 772); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.Chmod("testdata/vmlinuz", 267); err != nil {
+		log.Fatal(err)
+	}
 }
