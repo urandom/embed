@@ -19,7 +19,7 @@ import (
 // Since all file data can be provided as a string literal in the Go source,
 // such entries can be effectively embedded into the resultant binary.
 type FileSystem struct {
-	// Fallback instructs the file system to fall back to the operating system
+	// Fallback instructs the filesystem to fall back to the operating system
 	// if a file hasn't beed aded to it.
 	Fallback bool
 
@@ -47,11 +47,20 @@ func New() *FileSystem {
 	}
 }
 
-// Add inserts a new named file representation into the file system. The size,
+// Add inserts a new named file representation into the filesystem. The size,
 // mode and modTime parameters represent it's byte length, mode bits, and
 // modification time, respectively. The file data is represented as a string,
 // which is usually created using the fmt package's '%q' verb.
-func (fs *FileSystem) Add(name string, size int64, mode os.FileMode, modTime time.Time, data string) error {
+//
+// If the file name represents a relative path, it will be converted to an
+// absolute path where it's base directory is root of the filesystem. E.g.:
+//
+//	relative/path		->	/relative/path
+//	./relative/path		->	/relative/path
+//	/absolute/path		->	/absolute/path
+func (fs *FileSystem) Add(
+	name string, size int64, mode os.FileMode, modTime time.Time, data string,
+) error {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 
