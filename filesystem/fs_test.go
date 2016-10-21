@@ -87,7 +87,7 @@ func TestFiles(t *testing.T) {
 					}
 
 					if stat.Size() != tc.stat.Size() {
-						t.Fatalf("expected size %s, got %s", tc.stat.Size(), stat.Size())
+						t.Fatalf("expected size %d, got %d", tc.stat.Size(), stat.Size())
 					}
 
 					if stat.Mode() != tc.stat.Mode() {
