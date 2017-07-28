@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 
 var (
 	output       string
+	input        string
 	functionName string
 	packageName  string
 	buildTags    string
@@ -27,7 +29,7 @@ var (
 func main() {
 	flag.Parse()
 
-	if flag.NArg() < 1 && !fallback {
+	if flag.NArg() == 0 && !fallback && input == "" {
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -44,7 +46,66 @@ func main() {
 		}
 	}
 
-	writeData(out, header{packageName, functionName, buildTags, fallback}, flag.Args(), fatal, verbose)
+	names := flag.Args()
+	if input != "" {
+		names = processInput(input)
+	}
+
+	writeData(out, header{packageName, functionName, buildTags, fallback}, names, fatal, verbose)
+}
+
+func processInput(input string) []string {
+	names := make([]string, 0, 20)
+
+	var in io.Reader
+
+	if input == "-" {
+		in = os.Stdin
+	} else {
+		f, err := os.Open(input)
+		if err != nil {
+			log.Fatalf("Error opening input file %s: %+v\n", input, err)
+		}
+
+		defer f.Close()
+
+		in = f
+	}
+
+	r := bufio.NewReader(in)
+
+	for {
+		buf, err := r.ReadSlice('\n')
+
+		end := false
+		if err == io.EOF {
+			end = true
+		} else if err != nil {
+			log.Fatalf("Error reading line '%s': %v\n", buf, err)
+		}
+
+		index := bytes.IndexByte(buf, '#')
+		if index != -1 {
+			buf = buf[:index]
+		}
+
+		buf = bytes.TrimSpace(buf)
+
+		if len(buf) == 0 {
+			if end {
+				break
+			}
+			continue
+		}
+
+		names = append(names, string(buf))
+
+		if end {
+			break
+		}
+	}
+
+	return names
 }
 
 func writeData(w io.WriteCloser, h header, names []string, fatal, verbose bool) {
@@ -208,6 +269,7 @@ func init() {
 	}
 
 	flag.StringVar(&output, "output", "file_data.go", "output file name. '-' for stdout")
+	flag.StringVar(&input, "input", "", "input file name, to be used instead of the file arguments")
 	flag.StringVar(&functionName, "function-name", "NewFileSystem", "name of the init function")
 	flag.StringVar(&packageName, "package-name", "main", "package name of the generated file")
 	flag.StringVar(&buildTags, "build-tags", "", "build tags for the generated file")
