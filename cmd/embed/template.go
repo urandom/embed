@@ -35,6 +35,7 @@ package {{ .Pkg }}
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -42,7 +43,8 @@ import (
 	"github.com/urandom/embed/filesystem"
 )
 
-func {{ .Function }}() (*filesystem.FileSystem, error) {
+// {{ .Function }} creates a new filesystem with pre-filled binary data.
+func {{ .Function }}() (http.FileSystem, error) {
 	fs := filesystem.New()
 {{ if .Fallback }}
 	fs.Fallback = true
@@ -58,10 +60,13 @@ func {{ .Function }}() (*filesystem.FileSystem, error) {
 package {{ .Pkg }}
 
 import (
+	"net/http"
+
 	"github.com/urandom/embed/filesystem"
 )
 
-func {{ .Function }}() (*filesystem.FileSystem, error) {
+// {{ .Function }} creates a new empty filesystem.
+func {{ .Function }}() (http.FileSystem, error) {
 	fs := filesystem.New()
 {{ if .Fallback }}
 	fs.Fallback = true
