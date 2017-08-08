@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // A FileSystem is used to store and access file data. It implements the
@@ -76,7 +74,7 @@ func (fs *FileSystem) Add(
 		if i == len(parts)-1 {
 			// Leaf
 			if _, ok := n.children[p]; ok {
-				return errors.Wrap(os.ErrExist, "non-dir node already exists")
+				return os.ErrExist
 			}
 			var children map[string]node
 			if stat.IsDir() {
@@ -89,7 +87,7 @@ func (fs *FileSystem) Add(
 
 		if c, ok := n.children[p]; ok {
 			if !c.stat.IsDir() {
-				return errors.Wrap(os.ErrExist, "non-dir node already exists")
+				return os.ErrExist
 			}
 			n = &c
 		} else {
@@ -126,14 +124,9 @@ func (fs *FileSystem) Open(name string) (http.File, error) {
 			c, ok := n.children[p]
 			if !ok {
 				if fs.Fallback {
-					f, err := os.Open(name)
-					if err != nil {
-						err = errors.Wrap(err, "falling back to OS")
-					}
-
-					return f, err
+					return os.Open(name)
 				}
-				return nil, errors.Wrap(os.ErrNotExist, "opening file")
+				return nil, os.ErrNotExist
 			}
 
 			n = c
